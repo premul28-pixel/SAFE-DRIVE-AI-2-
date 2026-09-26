@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgis/postgis:15-3.3
+    container_name: safedrive_db
+    environment:
+      POSTGRES_DB: safedrive
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: safedrive_secret_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  mosquitto:
+    image: eclipse-mosquitto:latest
+    container_name: safedrive_mqtt
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+
+  backend:
+    build: ./backend
+    container_name: safedrive_backend
+    environment:
+      PORT: 5000
+      DATABASE_URL: postgres://postgres:safedrive_secret_pass@postgres:5432/safedrive
+      MQTT_URL: mqtt://mosquitto:1883
+      JWT_SECRET: safedrive_ai_production_jwt_secret
+    ports:
+      - "5000:5000"
+    depends_on:
+      - postgres
+      - mosquitto
+
+  frontend:
+    build: ./frontend
+    container_name: safedrive_frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
